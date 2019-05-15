@@ -1,16 +1,3 @@
-NOAA/NOS/CO-OPS
-Disclaimer: These data are based upon the latest information available as of the date of your request, and may differ from the published tide tables.
-Daily Tide Predictions
-StationName: Cedar Key 
-State: FL 
-Stationid: 8727520
-Prediction Type: Harmonic
-From: 20180101 05:05 - 20180131 19:26
-Units: Feet
-Time Zone: GMT
-Datum: MLLW
-Interval Type: High/Low
-
 Date 		Day	Time	Pred	High/Low
 2018/01/01	Mon	05:05	3.88	H
 2018/01/01	Mon	12:24	-1.39	L
