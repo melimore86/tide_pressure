@@ -1,0 +1,18 @@
+#1.	As a test case we will work with wq sensor 3 because this sensor has pressure information and has a known elevation from the RTK
+
+#2.	Need to pull the pressure information from sensor 3 (likely from flat file).  Use all available data that have passed qa/qc.
+
+#3.	Combine the pressure information from sensor with concurrent hourly atmospheric pressure from CK NOAA station.  This can be tricky I know to match these types of things up, but matching up by the hour should be ok.  Steve Longmire wrestled with this and got a lot of nice ideas from Ben and others on the R list and he used some of that in his bird camera work. That should be in his git hub repo.
+
+#4.	Pull the observed and predicted Cedar Key tidal heights by hour for the Cedar Key tide station.  Note you may be able to use some of my code for predicting the working time on the reefs as that is the predicted tides, but that site doesn't return the observed tides.  I don't remember a good scraping package for NOAA observed tidal data but hopefully is out there. If not I think you can download it in 30 day intervals and then stitch those 30 day periods together.  Again make sure the time stamps match up (UTC, day light savings, local time, etc. could all be reporting times)
+
+#5.	Once you have a data frame of these columns, you will just create a new column using the formula we pulled a while ago which included the atmospheric and sensor pressure and a couple of constants.  This should allow you to calculate depth.  
+
+
+https://www.vanessen.com/images/PDFs/Diver-ProductManual-en.pdf
+
+and a calculator to check your equation
+
+https://www.vanessen.com/products/water-level/ctd-diver#downloads
+
+Even just finishing the difference calculations in tidal range and timing of high/low tide between CK and each of LC will be useful.
