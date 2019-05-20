@@ -2,9 +2,9 @@ library("tidyverse")
 library("dplyr")
 library("ggplot2")
 
-### Times for pressure and tides are GMT
+#### Times for pressure and tides are GMT
 
-setwd("C:/Users/Mel/Desktop/tide_pressure/data")
+setwd("C:\\Users\\melimore86\\Desktop\\tide_pressure\\data")
 
 # Reading all of the pressure files that are .csv
 # Pressue is in millibars
@@ -17,28 +17,26 @@ pressure$date<- as.POSIXct(pressure$DATE.TIME, format="%m/%d/%Y %H:%M")
 
 
 # Reading all of the tidal files that are .txt
-tidal_temp = list.files(pattern="*.txt")
+#tidal_temp = list.files(pattern="*.txt")
 
 # Combining all files into a data frame
-tidal= do.call(rbind, lapply(tidal_temp, function(x) read.table(x, stringsAsFactors = FALSE, header=T)))
-
+#tidal= do.call(rbind, lapply(tidal_temp, function(x) read.table(x, stringsAsFactors = FALSE, #header=T)))
 
 #For tides need to round to the nearest hour to match with the pressure
 
-tidal$date<- as.POSIXct(paste(tidal$Date, tidal$Time), format="%Y/%m/%d %H:%M")
+#tidal$date<- as.POSIXct(paste(tidal$Date, tidal$Time), format="%Y/%m/%d %H:%M")
 
-tidal$date<-format(round(tidal$date, units="hours"), format="%Y/%m/%d %H:%M")
+#tidal$date<-format(round(tidal$date, units="hours"), format="%Y/%m/%d %H:%M")
 
-tidal2<- tidal %>%
-  group_by(date=as.Date(Date)) %>%
-  summarise(Measure = mean(Pred)) %>%
-  select(date, Measure)
+#tidal2<- tidal %>%
+  #group_by(date=as.Date(Date)) %>%
+  #summarise(Measure = mean(Pred)) %>%
+  #select(date, Measure)
 
-tidal2$Date<- as.POSIXct((tidal2$date), format="%Y/%m/%d")
+#tidal2$Date<- as.POSIXct((tidal2$date), format="%Y/%m/%d")
 
 
-# Sensor 3 data
-
+##### Sensor 3 data
 
 sensor<-read.csv("wq/wq.csv", header=T)
 
@@ -61,42 +59,42 @@ colnames(site_3)<- c("date", "pressure", "baro_pressure", "temperaure")
 
 # Adding column to distinguish between sensor and buoy
 
-pressure$type<- "buoy"
-site_3$type<- "sensor"
+#pressure$type<- "buoy"
+#site_3$type<- "sensor"
 
 #only leaving pressure and date
 
-sensor_b<- site_3 %>% 
-  dplyr::select(date, baro_pressure, type)
+#sensor_b<- site_3 %>% 
+  #dplyr::select(date, baro_pressure, type)
 
-pressure_b<- pressure %>% 
-  dplyr::select(date, baro_pressure, type)
+#pressure_b<- pressure %>% 
+  #dplyr::select(date, baro_pressure, type)
 
 
 #Combining together as per instruction 3
 
-barometric<- rbind(sensor_b, pressure_b)
+#barometric<- rbind(sensor_b, pressure_b)
 
 #Apply calculation based on https://www.vanessen.com/images/PDFs/Diver-ProductManual-en.pdf
 
-sensor
-baro_depth<- left_join(site_3, pressure, by = "date")
+#sensor
+#baro_depth<- left_join(site_3, pressure, by = "date")
 
 
 
 # Plotting barometric pressure 
 
-ggplot(barometric, aes (x= date, y=baro_pressure, color= type))+
-  geom_line() +
-  labs(x= "Date", y= "Barometric pressure millibars", color = "Sensnor Types") +
-  scale_colour_manual(values = c("orange", "blue")) +
-  theme_minimal()
+#ggplot(barometric, aes (x= date, y=baro_pressure, color= type))+
+  #geom_line() +
+  #labs(x= "Date", y= "Barometric pressure millibars", color = "Sensnor Types") +
+  #scale_colour_manual(values = c("orange", "blue")) +
+  #theme_minimal()
 
 
 
 # Elevation 
 
-elevation_production<- read.csv("data/elevation/elevation_production.csv", header=T)
+elevation_production<- read.csv("elevation/elevation_production.csv", header=T)
 
 elevation_production <- elevation_production %>% 
   filter (station== "LCO3")
@@ -119,35 +117,42 @@ site_3$kelvin<- (site_3$temperaure + 273.15)
 
 #Ph= P0*e^- (M*g*H)/(R*T)
 
+mean(elevation_production$elev_m)
+#-0.5410977
 
-site_3$ph<- (site_3$baro_pressure * 2.17 ^-((0.0288*9.81*elevation_production$elev_m)/(8.314*site_3$kelvin)))
+site_3$ph<- (site_3$baro_pressure * 2.17 ^-((0.0288*9.81*-0.5410977)/(8.314*site_3$kelvin)))
 
 #normalization using `normalize` from the package BBmisc
 library("BBmisc")
 #https://www.rdocumentation.org/packages/BBmisc/versions/1.10/topics/normalize
 
-site_3$normalization<- normalize(site_3$ph, method= "standardize", range= c(0,1))
+site_3$normalization<- normalize(site_3$ph, method= "range", range= c(0,1), margin = 1L, on.constant = "quiet")
 
-dat$normalization<- normalize(dat$TideHeight_NAVD_m, method= "standardize", range= c(0,1))
 
 # Tidal
 library("rtide") 
 library("scales")
 
 
-dat <- tide_height('Cedar Key',from = as.Date('2019-01-01'),
-                   to = as.Date('2019-01-30'), minutes = 60, 
+dat <- tide_height('Cedar Key',from = as.Date('2018-09-01'),
+                   to = as.Date('2018-09-30'), minutes = 60, 
                    tz = 'America/New_York')
 
 #the dates here are the dates you are interested in. So you enter a from and to date in YYYY-MM-DD format.  minutes are the minutes for the prediction so a value of 15 is a predicted tide every 15 minutes
-
 x_conversion<- -0.687
 dat$TideHeight_NAVD_m=dat$TideHeight + x_conversion 
 #convert from MLLW to NAVD using conversion from Peter's table
 
-#Dont neet conversion to feet 
-#ft_conversion<- 3.281
-#dat$TideHeight_NAVD_ft=dat$TideHeight_NAVD_m*ft_conversion
+dat$normalization<- normalize(dat$TideHeight_NAVD_m, method= "range", range= c(0,1), margin = 1L, on.constant = "quiet")
+
+#Normalizing methods
+#"center": Subtract mean.
+#"scale": Divide by standard deviation.
+#"standardize": Center and scale.
+#"range": Scale to a given range
+
+
+
 
 #Plotting
 
@@ -156,23 +161,24 @@ cols<- c("Predicted Tidal Height"=  "#0072B2","Target"="black", "Target +3"="#D5
 ggplot() +
 
   #geom_line(aes( y= kelvin/1583.735, color= "Temp K"), color= "orange") +
-  geom_hline(aes(color = "Target",yintercept = -1.45),size=1.2,linetype = 2) +
+  #geom_hline(aes(color = "Target",yintercept = -1.45),size=1.2,linetype = 2) +
   
-  geom_line(data = dat, aes(x = DateTime, y = normalization, color= "Predicted Tidal Height"), size =1.2, linetype=1)  +
+  geom_line(data = dat, aes(x = DateTime, y = normalization, color= "Predicted Tidal Height (m)"), size =1.2, linetype=1)  +
   
-  scale_x_datetime(name = "January 1-15, 2019", #<- can be in labs(), also, but fine here, since we need to use scale_x_dateime anyways
+  scale_x_datetime(name = "September 1-15, 2018", #<- can be in labs(), also, but fine here, since we need to use scale_x_dateime anyways
                    labels = date_format("%d-%H:%M", tz="America/New_York"),
+                   breaks = "1 days",
                    limits = c(
-                     as.POSIXct("2019-01-01 00:00:00 CET"),
-                     as.POSIXct("2019-01-15 00:00:00 CET"))) +
+                     as.POSIXct("2018-09-01 00:00:00 CET"),
+                     as.POSIXct("2018-09-07 00:00:00 CET"))) +
   
-  geom_hline(aes(color = "Target +3",yintercept = -1.20),size=1.5, linetype = 3) +
+  #geom_hline(aes(color = "Target +3",yintercept = -1.20),size=1.5, linetype = 3) +
   
-  geom_hline(aes(color = "Target -6",yintercept = -1.95),size=1.5, linetype = 3) +
+  #geom_hline(aes(color = "Target -6",yintercept = -1.95),size=1.5, linetype = 3) +
   
-  geom_hline(aes(color = "Refrigerator",yintercept = -0.7),size=1.3, linetype = 1) +
+  #geom_hline(aes(color = "Refrigerator",yintercept = -0.7),size=1.3, linetype = 1) +
   
-  geom_line (data= site_3, aes( x= date, y= normalization, color= "Ph"), linetype = 1, size= 1.5) +
+  geom_line (data= site_3, aes( x= date, y= normalization, color= "Atmospheric pressure at elevation height H"), linetype = 1, size= 1.5) +
   
   #Rearranged the scale_color_manual, to show the legend in the order of the lines shown in "breaks=c()" instead of in alpahebtical order (which is the default)
   #scale_color_manual(values =cols,guide= 'legend', show) +
@@ -186,5 +192,5 @@ ggplot() +
   #Added some themes, can change legend to "top", "bottom", and "left" if desired
   theme(legend.position=("top"),
         panel.border = element_rect(color = "black", size = 1, fill = NA, linetype="solid"),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +#<- to make the a-axis ticks 90 degrees
-  theme_minimal()
+        axis.text.x = element_text(angle = 90, hjust = 1)) #<- to make the a-axis ticks 90 degrees
+
