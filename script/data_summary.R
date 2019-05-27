@@ -126,15 +126,21 @@ pred_tidal$date<- as.POSIXct(pred_tidal$DateTime)
 
 ggplot() +
   geom_line(data = pred_tidal, aes(x = as.POSIXct(date), y = normalization, color= "Predicted Tidal Height (m)"), size =1.2, linetype=1)  +
+  
   geom_line(data = tidal, aes(x = as.POSIXct(date), y = normalization, color= "Tidal Height (m)"), size =1.2, linetype=1)  +
+  
   geom_line(data = site_3, aes(x = as.POSIXct(date), y = normalization, color= "Atmospheric pressure at elevation height at Height"), size =1.2, linetype=1)  +
   
-  scale_x_datetime(name = "April 1-2, 2018", #<- can be in labs(), also, but fine here, since we need to use scale_x_dateime anyways
+  scale_x_datetime(name = "April 1-2, 2019 GMT", #<- can be in labs(), also, but fine here, since we need to use scale_x_dateime anyways
                    labels = date_format("%d-%H:%M", tz="America/New_York"),
                    breaks = "4 hours",
                    limits = c(
                      as.POSIXct("2019-04-01 00:00:00 CET"),
                      as.POSIXct("2019-04-02 00:00:00 CET"))) +
+  
+  #scale_linetype_manual(values = c(1,2,3)) + 
+  
+  scale_colour_manual(values=c("#0072B2","#D55E00","#CC79A7")) +
   
   labs(title= "Cedar Key", y= "Tide Height NAVD (m)", color= "Tidal Lines") +
 
