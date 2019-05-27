@@ -47,6 +47,14 @@ tidal$verified2 <- (tidal$verified * 0.3048)
 
 tidal$normalization<- normalize(tidal$verified2, method= "range", range= c(0,1), margin = 1L, on.constant = "quiet")
 
+
+####Predicted tidal 
+
+tidal$predicted2<- (tidal$predicted * 0.3048)
+
+tidal$pred_normalization<- normalize(tidal$predicted2, method= "range", range= c(0,1), margin = 1L, on.constant = "quiet")
+
+
 ##### Sensor 3 data
 
 setwd("C:\\Users\\Mel\\Desktop\\tide_pressure\\data\\wq")
@@ -106,30 +114,31 @@ site_3$normalization<- normalize(site_3$ph, method= "range", range= c(0,1), marg
 
 
 
-pred_tidal <- tide_height('Cedar Key',from = as.Date('2019-04-01'),
-                   to = as.Date('2019-04-30'), minutes = 60, 
-                   tz = 'America/New_York')
+#pred_tidal <- tide_height('Cedar Key',from = as.Date('2019-04-01'),
+                   #to = as.Date('2019-04-30'), minutes = 60, 
+                   #tz = 'America/New_York')
 
 #the dates here are the dates you are interested in. So you enter a from and to date in YYYY-MM-DD format.  minutes are the minutes for the prediction so a value of 15 is a predicted tide every 15 minutes
-x_conversion<- -0.687
+#x_conversion<- -0.687
 
-pred_tidal $TideHeight_NAVD_m=pred_tidal $TideHeight + x_conversion 
+#pred_tidal $TideHeight_NAVD_m=pred_tidal $TideHeight + x_conversion 
 #convert from MLLW to NAVD using conversion from Peter's table
 
-pred_tidal$normalization<- normalize(pred_tidal$TideHeight_NAVD_m, method= "range", range= c(0,1), margin = 1L, on.constant = "quiet")
+#pred_tidal$normalization<- normalize(pred_tidal$TideHeight_NAVD_m, method= "range", range= c(0,1), margin = 1L, on.constant = "quiet")
 
-pred_tidal$date<- as.POSIXct(pred_tidal$DateTime)
+#pred_tidal$date<- as.POSIXct(pred_tidal$DateTime)
+
 
 #Plotting
 
 #cols<- c("Predicted Tidal Height"=  "#0072B2","Target"="black", "Target +3"="#D55E00", "Target -6"="#E69F00", "Refrigerator"="#999999", "Ph" = "darkblue")
 
 ggplot() +
-  geom_line(data = pred_tidal, aes(x = as.POSIXct(date), y = normalization, color= "Predicted Tidal Height (m)"), size =1.2, linetype=1)  +
+  geom_line(data = tidal, aes(x = as.POSIXct(date), y = pred_normalization, color= "Predicted Tidal Height (m)"), size =1.2)  +
   
-  geom_line(data = tidal, aes(x = as.POSIXct(date), y = normalization, color= "Tidal Height (m)"), size =1.2, linetype=1)  +
+  geom_line(data = tidal, aes(x = as.POSIXct(date), y = normalization, color= "Tidal Height (m)"), size =1.2)  +
   
-  geom_line(data = site_3, aes(x = as.POSIXct(date), y = normalization, color= "Atmospheric pressure at elevation height at Height"), size =1.2, linetype=1)  +
+  geom_line(data = site_3, aes(x = as.POSIXct(date), y = normalization, color= "Atmospheric pressure at elevation height at Height"), size =1.2)  +
   
   scale_x_datetime(name = "April 1-2, 2019 GMT", #<- can be in labs(), also, but fine here, since we need to use scale_x_dateime anyways
                    labels = date_format("%d-%H:%M", tz="America/New_York"),
@@ -148,3 +157,6 @@ ggplot() +
         panel.border = element_rect(color = "black", size = 1, fill = NA, linetype="solid"),
         axis.text.x = element_text(angle = 90, hjust = 1)) #<- to make the a-axis ticks 90 degrees
 
+
+setwd("C:/Users/Mel/Desktop/tide_pressure")
+ggsave("pic/inundation.png", dpi=300, width= 8, height= 6 )
