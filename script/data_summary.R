@@ -10,7 +10,7 @@ library("BBmisc")
 
 #### Times for pressure and tides are GMT
 
-setwd("C:\\Users\\Mel\\Desktop\\tide_pressure\\data")
+setwd("C:/Users/melimore86/Desktop/tide_pressure/data")
 
 #### Reading all of the pressure files that are .csv
 # Pressue is in millibars
@@ -28,7 +28,7 @@ colnames(pressure)<- c("date_time", "windspeed", "direction", "gust", "at", "bar
 #### Reading all of the observed tidal files that are .txt
 
 #### Verified tidal
-setwd("C:\\Users\\Mel\\Desktop\\tide_pressure\\data\\tidal")
+setwd("C:/Users/melimore86/Desktop/tide_pressure/data/tidal")
 
 tidal_temp = list.files(pattern="*.csv")
 
@@ -57,7 +57,7 @@ tidal$pred_normalization<- normalize(tidal$predicted2, method= "range", range= c
 
 ##### Sensor 3 data
 
-setwd("C:\\Users\\Mel\\Desktop\\tide_pressure\\data\\wq")
+setwd("C:/Users/melimore86/Desktop/tide_pressure/data/wq")
 
 site_3<-read.csv("wq.csv", header=T)
 
