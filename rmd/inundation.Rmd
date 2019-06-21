@@ -1,0 +1,195 @@
+---
+title: "CEDAR KEY, FL INUNDATION"
+output:  
+  html_document:  
+    toc: true  
+    toc_float: true  
+---
+
+```{r setup, include=FALSE}
+
+library("tidyverse")
+library("dplyr")
+library("ggplot2")
+library("rtide") 
+library("scales")
+library("BBmisc")
+library("lubridate")
+```
+
+### INTRODUCTION
+
+This is a document explaining how to use the following code to create an inundation calculation in relation to the tidal trends and pressure collected from Site 3. 
+
+### AIR PRESSURE
+
+Make sure to select the correct directory. Choose the directory where all of the pressure files are located. The following code is used to read all .csv files and then `lapply` to create a table with all of the information from each .csv file. From the NOAA website, https://tidesandcurrents.noaa.gov/stationhome.html?id=8727520, you can download the AIR PRESSURE data. The Station ID for Cedar Key is 8727520. You can only download 30 days at a time, so you will have multiple file, hence the code below. 
+
+```{r pressure, echo=FALSE}
+
+setwd("C:/Users/Mel/Desktop/tide_pressure/data")
+
+#### Reading all of the pressure files that are .csv
+# Pressue is in millibars
+pressure_temp <- list.files(pattern="*.csv")
+
+# Combining all files into a data frame
+pressure <- do.call(rbind, lapply(pressure_temp, function(x) read.csv(x, stringsAsFactors = FALSE)))
+
+
+```
+
+The pressure data from the buoy is directly downloaded from the website. The settings for the download are:  
+  
+TIME:GMT  
+UNIT: METRIC  
+INTERVAL: 1 HOUR  
+
+The code below is to adjust the date/time format and rename the columns using the `as.POSIXct` argument.
+```{r pressure_time}
+#Time in is GMT
+pressure$date<- as.POSIXct(pressure$DATE.TIME, format="%m/%d/%Y %H:%M")
+
+colnames(pressure)<- c("date_time", "windspeed", "direction", "gust", "at", "baro_pressure", "relhum", "vis", "date")
+```
+### TIDAL HEIGHTS
+
+Use the same NOAA website to download the WATER HEIGHTS. You can only download the tidal height information for every 30 days. The settings for the tidal heights are:
+
+TIME:GMT  
+UNIT: METRIC  
+INTERVAL: 1 HOUR  
+DATUM: NAVD  
+
+Save the tidal files in another folder, and change the directory. It will be easy to apply the same `lapply` argument to read and combine all of the .csv files. It could be possible that it will not allow you to download the data file per hour because the data is too new, I would wait until that option is available before you download the data. The data files include actual tidal heights and predicted tidal heights. 
+
+```{r tidal_lappy}
+
+setwd("C:/Users/Mel/Desktop/tide_pressure/data/tidal")
+
+#### Verified tidal heights
+tidal_temp = list.files(pattern="*.csv")
+
+# Combining all files into a data frame
+tidal <- do.call(rbind, lapply(tidal_temp, function(x) read.csv(x, stringsAsFactors = FALSE)))
+
+```
+
+The time is in per hour, so there is no need to round the observations. Time is also in GMT, so it is cohesive with the AIR PRESSURE data. The column names are also updated using `colnames`.
+
+```{r tidal_date}
+tidal$date<- paste(tidal$Date, tidal$Time..GMT.)
+
+tidal$date<- as.POSIXct(tidal$date, format="%m/%d/%Y %H:%M")
+
+colnames(tidal)<- c("datex", "timex", "predicted", "prelim", "verified", "date")
+
+```
+
+```{r, echo=FALSE}
+#I forgot to change the units to METRIC, this ia conversion, but new data will not need this, this is from FT to M
+tidal$verified2 <- (tidal$verified * 0.3048)
+tidal$predicted2<- (tidal$predicted * 0.3048)
+```
+
+The following code is to standardize the height data from 0 to 1. The package for the `normalize` argument is `BBmisc` for actual tidal heights. 
+
+```{r tidal_standardize}
+
+tidal$normalization<- normalize(tidal$verified2, method= "range", range= c(0,1), margin = 1L, on.constant = "quiet")
+```
+
+The following code is to standardize the height data from 0 to 1. The package for the `normalize` argument is `BBmisc` for predicted tidal heights. 
+```{r tidal_pre_standardize}
+####Predicted tidal 
+tidal$pred_normalization<- normalize(tidal$predicted2, method= "range", range= c(0,1), margin = 1L, on.constant = "quiet")
+
+```
+
+### SITE 3 BAROMETRIC PRESSURE
+
+Similar as before
+
+```{r site_data}
+setwd("C:/Users/Mel/Desktop/tide_pressure/data/wq")
+
+site_3<-read.csv("wq.csv", header=T)
+
+#Pressure data are cm
+site_3<- site_3 %>% 
+  filter(Site==3) %>% 
+  select(Date, Pressure, Temperature)
+
+colnames(site_3)<- c("date", "pressure", "temperaure")
+```
+
+For the Site 3 temperature it needs to be converted into Kelvin for the Diver Equation. The Date also needs to be converted from EST UTC to GMT. That is +4 hours for the conversion. The pressure collected from the Diver sensor also needs to be converted from cm to millibars. 
+
+```{r site_temp_date}
+#The Diver Equation requires termperature to be in Kelvin
+site_3$kelvin<- (site_3$temperaure + 273.15)
+
+#Convert UTC EST to GMT
+site_3$Date<- as.POSIXct(site_3$date)
+site_3$Date<-format(site_3$date, tz="America/Los_Angeles")
+site_3$Date<- format(site_3$date, tz="EST+4")
+
+#Convert sensor 3 pressure from cm to millibars, need to mulitply by 0.980665,
+site_3$baro_pressure <- site_3$pressure * 0.980665
+
+```
+
+###ELEVATION FORMULA
+
+Elevation Formula as per Diver manual, below are the different variables needed:  
+
+Ph= P0*e^- (M*g*H)/(R*T)  
+
+*Ph= atmospheric pressure at elevation height at H*  
+*P0= atmospheric pressure at reference height*  
+*m= 28.8 *10^-3*  
+*g= 9.81 m/s (standard gravity)*  
+*R= 8.314 j/mol/k*  
+*t= temperature in Kelvin*   
+*H= height*  
+
+WQ 3 height is -1.422 meters   
+
+Cedar Key tide gauge is at zero is -0.687  
+```{r}
+#Ph is the calculated final value from the inundation equation
+site_3$ph<- (site_3$baro_pressure * 2.17 ^-((0.0288*9.81*-1.422)/(8.314*site_3$kelvin)))
+
+#Standarizing using `normalize` from the package BBmisc
+site_3$normalization<- normalize(site_3$ph, method= "range", range= c(0,1), margin = 1L, on.constant = "quiet")
+```
+
+###PLOTTING
+
+```{r plot, message= FALSE, warning=FALSE}
+ggplot() +
+  
+  geom_line(data = tidal, aes(x = as.POSIXct(date), y = pred_normalization, color= "Predicted Tidal Height (m)"), size =1.2)  + #<- color in aes() signifies the value of the line, not the physical color, this will generate an appropriate legend
+  
+  geom_line(data = tidal, aes(x = as.POSIXct(date), y = normalization, color= "Tidal Height (m)"), size =1.2)  +  #<- color in aes() signifies the value of the line, not the physical color, this will generate an appropriate legend
+  
+  geom_line(data = site_3, aes(x = as.POSIXct(date), y = normalization, color= "Atmospheric Pressure (Ph calcuation)"), size =1.2)  +  #<- color in aes() signifies the value of the line, not the physical color, this will generate an appropriate legend
+   
+  scale_x_datetime(name = "April 1-2, 2019 GMT", #<- can be in labs(), also, but fine here, since we need to use scale_x_dateime anyways
+                   labels = date_format("%d-%H:%M", tz="America/New_York"),
+                   breaks = "4 hours", #<- can adjust the breaks of the x-axis, you can change depending on what your start and end date are
+                   limits = c(
+                     as.POSIXct("2019-04-01 00:00:00 CET"), #<- start date and time that can be edited
+                     as.POSIXct("2019-04-02 00:00:00 CET"))) + #<- end date and time that can be edited
+  
+  #scale_linetype_manual(values = c(1,2,3)) + <- you can use this if you want to change the linetypes
+  
+  scale_colour_manual(values=c("#0072B2","#D55E00","#CC79A7")) + #<- specifying the colors here, in order as they appear, from a colorblind palette http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/
+  
+  labs(title= "Cedar Key", y= "Tide Height NAVD (m)", color= "Tidal Lines") + #<- labs specify the x-axis, y-axis, and the "color" meaning not the actual colors of the lines but the value we are specifying in the lines, which in this case are Tidal Lines
+
+  theme(legend.position=("bottom"), #<- legend position at the bottom
+        panel.border = element_rect(color = "black", size = 1, fill = NA, linetype="solid"), #<- created a border around the figure
+        axis.text.x = element_text(angle = 45, hjust = 1)) #<- to make the a-axis ticks 45 degrees
+```
+
